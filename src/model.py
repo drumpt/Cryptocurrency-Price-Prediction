@@ -15,19 +15,19 @@ import preprocessor
 device = "cuda" if torch.cuda.is_available() else "cpu"
 if device != "cpu":
     torch.set_default_tensor_type("torch.cuda.FloatTensor")
-print(device)
+print(f"device : {device}")
 
 class CryptocurrencyPricePredictor():
-    def __init__(self, mode, data_dir, output_dir, weight_dir, batch_size, epochs, look_back):
-        self.mode = mode
-        self.data_dir = data_dir
-        self.output_dir = output_dir
-        self.weight_dir = weight_dir
-        self.batch_size = batch_size
-        self.epochs = epochs
-        self.look_back = look_back
+    def __init__(self, config):
+        self.mode = config["mode"]
+        self.data_dir = config["data_dir"]
+        self.output_dir = config["output_dir"]
+        self.weight_dir = config["weight_dir"]
+        self.batch_size = config["batch_size"]
+        self.epochs = config["epochs"]
+        self.look_back = config["look_back"]
 
-        self.model = LSTMPredictor(hidden_dim = 128, num_layers = 2)
+        self.model = LSTMPredictor(config)
         self.model.to(device)
         print(self.model)
 
@@ -39,12 +39,12 @@ class CryptocurrencyPricePredictor():
 
         self.loss_function = nn.MSELoss()
         self.optimizer = optim.Adam(params = self.model.parameters(), lr = 1e-4)
-        self.scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, gamma = 1)
+        self.scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, gamma = 0.95)
 
     def train(self):
         train_size = int(0.8 * len(self.dataset))
         validation_size = len(self.dataset) - train_size
-        train_set, validation_set = torch.utils.data.random_split(self.dataset, [train_size, validation_size])
+        train_set, validation_set = torch.utils.data.random_split(self.dataset, [train_size, validation_size], generator = torch.Generator(device = "cuda:0").manual_seed(42))
         train_dataloader = DataLoader(train_set, batch_size = self.batch_size, shuffle = False)
         validation_dataloader = DataLoader(validation_set, batch_size = self.batch_size, shuffle = False)
 
@@ -140,23 +140,73 @@ class CryptocurrencyPricePredictor():
         plt.ylabel('loss')
         plt.savefig(os.path.join(self.output_dir, "training_result.png"))
 
+# class LSTMPredictor(nn.Module):
+#     def __init__(self, hidden_dim, num_layers, look_back):
+#         super(LSTMPredictor, self).__init__()
+#         self.hidden_dim = hidden_dim
+#         self.num_layers = num_layers
+
+#         self.conv1 = nn.Conv1d(in_channels = 1, out_channels = hidden_dim, kernel_size = 3, padding = 1)
+#         self.conv2 = nn.Conv1d(in_channels = hidden_dim, out_channels = hidden_dim, kernel_size = 3, padding = 1)
+#         self.conv3 = nn.Conv1d(in_channels = hidden_dim, out_channels = 1, kernel_size = 3, padding = 1)
+#         self.bn1 = nn.BatchNorm1d(hidden_dim)
+#         self.bn2 = nn.BatchNorm1d(hidden_dim)
+#         self.lstm = nn.LSTM(look_back, hidden_dim, num_layers, batch_first = True)
+#         self.fc1 = nn.Linear(hidden_dim, 32)
+#         self.fc2 = nn.Linear(32, 1)
+#         self.relu = nn.ReLU()
+
+#     def forward(self, x):
+#         # x = x.reshape((x.shape[0], x.shape[2], x.shape[1]))
+#         x = self.relu(self.bn1(self.conv1(x)))
+#         x = self.relu(self.bn2(self.conv2(x)))
+#         x = self.relu(self.conv3(x))
+
+#         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim, requires_grad = True).detach()
+#         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim, requires_grad = True).detach()
+#         out, (hn, cn) = self.lstm(x, (h0, c0))
+#         out = self.relu(self.fc1(out[:, -1, :]))
+#         out = self.fc2(out)
+#         return out
+
 class LSTMPredictor(nn.Module):
-    def __init__(self, hidden_dim, num_layers):
+    def __init__(self, config):
         super(LSTMPredictor, self).__init__()
-        self.hidden_dim = hidden_dim
-        self.num_layers = num_layers
-        self.dropout = nn.Dropout(0.25)
+        self.hidden_dim = config["hidden_dim"]
+        self.num_layers = config["num_layers"]
+        self.batch_size = config["batch_size"]
+        self.look_back = config["look_back"]
+
+        self.conv1 = nn.Conv1d(in_channels = 1, out_channels = self.hidden_dim, kernel_size = 3, padding = 1)
+        self.conv2 = nn.Conv1d(in_channels = self.hidden_dim, out_channels = self.hidden_dim, kernel_size = 3, padding = 1)
+        self.conv3 = nn.Conv1d(in_channels = self.hidden_dim, out_channels = 1, kernel_size = 3, padding = 1)
+        self.bn1 = nn.BatchNorm1d(self.hidden_dim)
+        self.bn2 = nn.BatchNorm1d(self.hidden_dim)
+        self.lstm = nn.LSTM(self.look_back, self.hidden_dim, self.num_layers, dropout = 0.3)
+        self.fc1 = nn.Linear(self.hidden_dim, 32)
+        self.fc2 = nn.Linear(32, 1)
         self.relu = nn.ReLU()
 
-        self.lstm = nn.LSTM(1, hidden_dim, num_layers, batch_first = True)
-        self.fc1 = nn.Linear(hidden_dim, 32)
-        self.fc2 = nn.Linear(32, 1)
+        self.h0 = torch.randn(self.num_layers, self.batch_size, self.hidden_dim, requires_grad = True).detach()
+        self.c0 = torch.randn(self.num_layers, self.batch_size, self.hidden_dim, requires_grad = True).detach()
 
     def forward(self, x):
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).requires_grad_()
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).requires_grad_()
-        out, (hn, cn) = self.lstm(x, (h0.detach(), c0.detach()))
-        out = self.dropout(self.relu(self.fc1(out[:, -1, :])))
+        print(f"first : {x.shape}")
+        x = self.relu(self.bn1(self.conv1(x)))
+        print(f"second : {x.shape}")
+        x = self.relu(self.bn2(self.conv2(x)))
+        print(f"third : {x.shape}")
+        x = self.relu(self.conv3(x))
+        print(f"fourth : {x.shape}")
+
+        x.permute(2, 0, 1) # (seq_len, batch_size, input_size)
+        print(f"fifth : {x.shape}")
+
+        out, (hn, cn) = self.lstm(x, (self.h0, self.c0))
+
+        print(f"sixth : {x.shape}")
+
+        out = self.relu(self.fc1(out[:, -1, :]))
         out = self.fc2(out)
         return out
 
@@ -167,11 +217,16 @@ class CryptocurrencyDataset(Dataset):
         self.input_list, self.output_list = [], []
 
         for csv_file in self.csv_files:
-            input_list, output_list = preprocessor.read_csv(csv_file, sort = "ratio", look_back = self.look_back)
+            input_list, output_list = preprocessor.read_csv(csv_file, look_back = self.look_back, sort = "ratio")
             self.input_list.extend(input_list)
             self.output_list.extend(output_list)
-        self.input_list = torch.tensor(self.input_list, dtype = torch.float).unsqueeze(-1)
-        self.output_list = torch.tensor(self.output_list, dtype = torch.float).unsqueeze(-1)
+
+        # self.input_list = torch.tensor(self.input_list, dtype = torch.float).unsqueeze(-1).to(device)
+        # self.output_list = torch.tensor(self.output_list, dtype = torch.float).unsqueeze(-1).to(device)
+        self.input_list = torch.tensor(self.input_list, dtype = torch.float).unsqueeze(1).to(device)
+        self.output_list = torch.tensor(self.output_list, dtype = torch.float).unsqueeze(1).to(device)
+
+        # print(f"self.input_list.shape : {self.input_list.shape}")
 
     def __len__(self):
         return self.input_list.shape[0]

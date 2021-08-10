@@ -1,0 +1,11 @@
+{
+    "mode" : "train",
+    "data_dir" : "../datasets",
+    "output_dir" : "../resources",
+    "weight_dir" : "",
+    "batch_size" : 8,
+    "epochs" : 100,
+    "look_back" : 30,
+    "hidden_dim" : 128,
+    "num_layers" : 2
+}
