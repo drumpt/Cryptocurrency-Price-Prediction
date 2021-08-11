@@ -22,3 +22,4 @@ python3 main.py --mode predict --data_dir ../datasets/coin_Bitcoin.csv --weight_
 
 ## References
 - [비트코인 가격 예측](https://wikidocs.net/53275)
+- [Stock price prediction using LSTM, RNN and CNN-sliding window model](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8126078)
