@@ -21,4 +21,4 @@ python3 main.py --mode predict --data_dir ../datasets/coin_Bitcoin.csv --weight_
 ## Result
 
 ## References
-- https://wikidocs.net/53275
+- [비트코인 가격 예측](https://wikidocs.net/53275)
