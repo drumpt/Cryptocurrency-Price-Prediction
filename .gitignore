@@ -2,3 +2,4 @@ resources/*
 papers/*
 
 **/.DS_Store
+**/__pycache__/
