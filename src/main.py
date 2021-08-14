@@ -5,7 +5,6 @@ import model
 
 def main(config):
     mode = config["mode"]
-
     predictor = model.CryptocurrencyPricePredictor(config)
     if mode == "train":
         predictor.train()
@@ -13,8 +12,6 @@ def main(config):
         predictor.test()
     elif mode == "predict":
         predictor.predict()
-    else: # debug
-        pass
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

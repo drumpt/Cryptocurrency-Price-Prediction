@@ -1,11 +1,11 @@
 {
-    "mode" : "train",
-    "data_dir" : "../datasets",
+    "mode" : "predict",
+    "data_dir" : "../datasets/coin_Ethereum.csv",
     "output_dir" : "../resources",
-    "weight_dir" : "",
-    "batch_size" : 8,
-    "epochs" : 100,
-    "look_back" : 30,
+    "weight_dir" : "../resources/weights_026_633.6662_805.7058.pt",
+    "batch_size" : 4,
+    "epochs" : 30,
+    "look_back" : 10,
     "hidden_dim" : 128,
-    "num_layers" : 2
+    "num_layers" : 4
 }

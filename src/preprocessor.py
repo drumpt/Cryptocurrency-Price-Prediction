@@ -11,7 +11,7 @@ def get_all_csv_files(data_dir):
             csv_files.append(os.path.join(data_dir, file))
     return csv_files
 
-def read_csv(csv_dir, look_back, sort):
+def read_csv(csv_dir, look_back):
     data, input_list, output_list = [], [], []
     with open(csv_dir, "r") as csv_file:
         reader = csv.reader(csv_file)
@@ -20,13 +20,8 @@ def read_csv(csv_dir, look_back, sort):
         for row in reader:
             data.append(float(row[6]))
         data.append(float(row[7]))
-
-        if sort == "ratio":
-            data = [price / data[0] - 1 for price in data] # normalization
-            for i in range(len(data) - look_back - 1):
-                input_list.append(data[i : i + look_back])
-                output_list.append(data[i + look_back])
-        else: # price
-            input_list.extend(data[:-1])
-            output_list.extend(data[1:])
+        data = [price / data[0] - 1 for price in data] # normalization
+        for i in range(len(data) - look_back - 1):
+            input_list.append(data[i : i + look_back])
+            output_list.append(data[i + look_back])
     return input_list, output_list
