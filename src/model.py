@@ -56,8 +56,6 @@ class LSTMPredictor(nn.Module):
         self.conv1 = nn.Conv1d(in_channels = 1, out_channels = self.hidden_dim, kernel_size = 3, padding = 1)
         self.conv2 = nn.Conv1d(in_channels = self.hidden_dim, out_channels = self.hidden_dim, kernel_size = 3, padding = 1)
         self.conv3 = nn.Conv1d(in_channels = self.hidden_dim, out_channels = 1, kernel_size = 3, padding = 1)
-        self.bn1 = nn.BatchNorm1d(self.hidden_dim)
-        self.bn2 = nn.BatchNorm1d(self.hidden_dim)
         self.lstm = nn.LSTM(input_size = 1, hidden_size = self.hidden_dim, num_layers = self.num_layers, dropout = 0.3)
         self.fc1 = nn.Linear(self.hidden_dim, 32)
         self.fc2 = nn.Linear(32, 1)
@@ -66,10 +64,6 @@ class LSTMPredictor(nn.Module):
     def forward(self, x):
         # input : (batch_size, num_channels, seq_len)
         # 3 convolutional layers
-        # x = self.relu(self.bn1(self.conv1(x)))
-        # x = self.relu(self.bn2(self.conv2(x)))
-        # x = self.relu(self.conv3(x))
-
         x = self.relu(self.conv1(x))
         x = self.relu(self.conv2(x))
         x = self.relu(self.conv3(x))
